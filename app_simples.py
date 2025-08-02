@@ -7,6 +7,17 @@ from nltk.corpus import stopwords
 from pysentimiento import create_analyzer
 import pandas as pd
 
+# Setup NLTK
+@st.cache_resource
+def setup_nltk():
+    try:
+        nltk.download('stopwords', quiet=True)
+        nltk.download('punkt', quiet=True)
+    except:
+        pass
+
+setup_nltk()
+
 # Funções necessárias
 def limpar_texto_completo(texto):
     if isinstance(texto, str):
@@ -22,26 +33,33 @@ def limpar_texto_completo(texto):
 
 def remover_stop_words(texto):
     if isinstance(texto, str):
-        stop_words = set(stopwords.words('portuguese'))
-        palavras = texto.split()
-        texto_sem_stopwords = [palavra for palavra in palavras if palavra not in stop_words]
-        return ' '.join(texto_sem_stopwords)
+        try:
+            stop_words = set(stopwords.words('portuguese'))
+            palavras = texto.split()
+            texto_sem_stopwords = [palavra for palavra in palavras if palavra not in stop_words]
+            return ' '.join(texto_sem_stopwords)
+        except:
+            return texto
     return ''
 
 def classificar_sentimento_binario(texto, threshold=0.55):
-    resultado = analyzer.predict(texto)
-    probas = resultado.probas
-    if resultado.output == "POS":
-        return pd.Series(["positivo", round(probas["POS"], 3)])
-    elif resultado.output == "NEG":
-        return pd.Series(["negativo", round(probas["NEG"], 3)])
-    else:
-        if probas["POS"] >= threshold:
+    try:
+        resultado = analyzer.predict(texto)
+        probas = resultado.probas
+        if resultado.output == "POS":
             return pd.Series(["positivo", round(probas["POS"], 3)])
-        elif probas["NEG"] >= threshold:
+        elif resultado.output == "NEG":
             return pd.Series(["negativo", round(probas["NEG"], 3)])
         else:
-            return pd.Series(["incerto", max(round(probas["POS"], 3), round(probas["NEG"], 3))])
+            if probas["POS"] >= threshold:
+                return pd.Series(["positivo", round(probas["POS"], 3)])
+            elif probas["NEG"] >= threshold:
+                return pd.Series(["negativo", round(probas["NEG"], 3)])
+            else:
+                return pd.Series(["incerto", max(round(probas["POS"], 3), round(probas["NEG"], 3))])
+    except Exception as e:
+        st.error(f"Erro na análise: {str(e)}")
+        return pd.Series(["erro", 0.0])
 
 class SentimentPipeline:
     def __init__(self):
@@ -55,22 +73,52 @@ class SentimentPipeline:
 # Carregar componentes
 @st.cache_resource
 def carregar_analyzer():
-    return create_analyzer(task="sentiment", lang="pt")
+    try:
+        return create_analyzer(task="sentiment", lang="pt")
+    except Exception as e:
+        st.error(f"Erro ao carregar analyzer: {str(e)}")
+        return None
 
 @st.cache_resource
 def carregar_modelo():
-    with open('sentiment_pipeline.pkl', 'rb') as f:
-        return pickle.load(f)
+    try:
+        with open('sentiment_pipeline.pkl', 'rb') as f:
+            return pickle.load(f)
+    except Exception as e:
+        st.error(f"Erro ao carregar modelo: {str(e)}")
+        return None
 
 # Interface
 st.title("Análise de Sentimento")
-texto = st.text_area("Digite o texto:")
-if st.button("Prever"):
-    if texto.strip():
-        analyzer = carregar_analyzer()
-        modelo = carregar_modelo()
-        resultado = modelo.processar_texto(texto)
-        st.write(f"Sentimento: {resultado['sentimento']}")
-        st.write(f"Confiança: {resultado['probabilidade']:.1%}")
-    else:
-        st.warning("Digite um texto") 
+st.markdown("---")
+
+# Carregar componentes
+analyzer = carregar_analyzer()
+modelo = carregar_modelo()
+
+if analyzer is None or modelo is None:
+    st.error("Erro ao carregar componentes necessários.")
+else:
+    texto = st.text_area("Digite o texto para análise:", height=150)
+    
+    if st.button("Analisar", type="primary"):
+        if texto.strip():
+            with st.spinner("Analisando sentimento..."):
+                resultado = modelo.processar_texto(texto)
+                
+                st.markdown("### Resultado da Análise")
+                
+                if resultado['sentimento'] == 'positivo':
+                    st.success(f"✅ **Sentimento:** {resultado['sentimento'].title()}")
+                elif resultado['sentimento'] == 'negativo':
+                    st.error(f"❌ **Sentimento:** {resultado['sentimento'].title()}")
+                else:
+                    st.warning(f"⚠️ **Sentimento:** {resultado['sentimento'].title()}")
+                
+                st.info(f"📊 **Confiança:** {resultado['probabilidade']:.1%}")
+                st.progress(resultado['probabilidade'])
+        else:
+            st.warning("⚠️ Digite um texto para análise")
+
+st.markdown("---")
+st.markdown("*Desenvolvido com Streamlit e IA Generativa*") 
