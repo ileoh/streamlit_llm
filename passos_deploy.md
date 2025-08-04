@@ -1,4 +1,4 @@
-# Guia: Do Modelo Pickle para Streamlit Local
+# Guia: Deploy do Modelo de Análise de Sentimento
 
 ## 📋 Pré-requisitos
 
@@ -17,15 +17,12 @@ source .venv/bin/activate
 ### 2. Instalar Dependências
 ```bash
 # Instalar bibliotecas necessárias
-pip install streamlit pandas scikit-learn nltk pysentimiento transformers torch
-
-# Ou usar o requirements.txt
 pip install -r requirements.txt
 ```
 
 ### 3. Baixar Recursos NLTK
 ```bash
-python -c "import nltk; nltk.download('stopwords')"
+python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
 ```
 
 ## 🔧 Estrutura do Projeto
@@ -33,42 +30,96 @@ python -c "import nltk; nltk.download('stopwords')"
 ```
 projeto/
 ├── sentiment_pipeline.pkl    # Modelo treinado
-├── app.py                    # Aplicativo Streamlit
-├── requirements.txt          # Dependências
-└── README.md               # Documentação
+├── app_simples.py           # Aplicativo Streamlit principal
+├── requirements.txt          # Dependências (otimizado para deploy)
+├── .streamlit/
+│   └── config.toml         # Configuração do Streamlit
+└── passos_deploy.md        # Este guia
 ```
 
-## 🎯 Passos para Criar o App
+## 🎯 Passos para Deploy Local
 
-### 1. Verificar se o Modelo Existe
+### 1. Verificar Arquivos
 - Confirme que `sentiment_pipeline.pkl` está na raiz do projeto
+- Verifique se `app_simples.py` está configurado corretamente
 
-### 2. Criar o App Streamlit (`app.py`)
-- Incluir todas as funções e classes do notebook
-- Usar `@st.cache_resource` para carregar modelo e analyzer
-- Implementar interface para análise individual e em lote
-
-### 3. Executar Localmente
+### 2. Executar Localmente
 ```bash
-streamlit run app.py
+streamlit run app_simples.py
 ```
+
+## ☁️ Deploy no Streamlit Cloud
+
+### 1. Preparação
+- Certifique-se de que o código está no GitHub
+- Verifique se `requirements.txt` está otimizado (sem `sentencepiece` explícito)
+- Confirme que `.streamlit/config.toml` está presente
+
+### 2. Deploy no Streamlit Cloud
+1. Acesse [share.streamlit.io](https://share.streamlit.io)
+2. Faça login com sua conta GitHub
+3. Clique em "New app"
+4. Selecione o repositório e arquivo `app_simples.py`
+5. Clique em "Deploy!"
+
+### 3. Configurações Importantes
+- **Arquivo principal**: `app_simples.py`
+- **Requirements**: `requirements.txt` (otimiz
+- **Configuração**: `.streamlit/config.toml`
+
+## 🛠️ Solução de Problemas
+
+### Erro "Error installing requirements"
+**Causa**: Dependências que precisam de compilação (como `sentencepiece`)
+**Solução**: Remover `sentencepiece` do `requirements.txt` - será gerenciado automaticamente
+
+### Erro de NLTK
+**Causa**: Recursos NLTK não baixados
+**Solução**: O app inclui download automático via `@st.cache_resource`
+
+### Problemas de Deploy
+1. Verifique se todos os arquivos estão no GitHub
+2. Confirme que `requirements.txt` está limpo
+3. Aguarde alguns minutos para o deploy inicial
 
 ## 📝 Checklist Final
 
+### Para Deploy Local
 - [ ] Ambiente virtual criado e ativado
-- [ ] Dependências instaladas
+- [ ] Dependências instaladas (`pip install -r requirements.txt`)
 - [ ] Recursos NLTK baixados
 - [ ] Modelo pickle na raiz
-- [ ] Funções e classes do notebook incluídas no app.py
-- [ ] App Streamlit criado com todas as dependências
-- [ ] Teste local funcionando
+- [ ] App funcionando localmente (`streamlit run app_simples.py`)
+
+### Para Deploy Cloud
+- [ ] Código no GitHub
+- [ ] `requirements.txt` otimizado (sem `sentencepiece`)
+- [ ] `.streamlit/config.toml` presente
+- [ ] Deploy iniciado no Streamlit Cloud
+- [ ] App funcionando online
 
 ## 🎉 Resultado
 
+### Local
 O aplicativo estará disponível em: `http://localhost:8501`
+
+### Cloud
+O aplicativo estará disponível em: `https://[seu-app].streamlit.app`
 
 **Funcionalidades:**
 - ✅ Análise individual de texto
-- ✅ Análise em lote com upload CSV
-- ✅ Download dos resultados
 - ✅ Interface moderna e responsiva
+- ✅ Tratamento de erros robusto
+- ✅ Download automático de recursos NLTK
+- ✅ Cache de recursos para performance
+
+## 📊 Monitoramento
+
+### Logs do Streamlit Cloud
+- Acesse "Manage App" no Streamlit Cloud
+- Verifique logs em caso de erro
+- Monitore performance e uso
+
+### Atualizações
+- Push para GitHub atualiza automaticamente o deploy
+- Aguarde 2-5 minutos para propagação
